@@ -15,7 +15,7 @@ pub struct DEA<ST, LT> {
 
 impl<ST, LT> DEA<ST, LT>
 where
-    ST: Eq + Hash + Clone,
+    ST: Eq + Hash + Clone + Ord,
     LT: Eq + Hash + Clone,
 {
     pub fn new<T: Into<ST>>(start_state: T) -> Self {
@@ -76,7 +76,7 @@ where
 
         for letter in word {
             let letter_str: LT = letter.into();
-            if let Some(next_state) = self.delta.get(&(cur_state, letter_str)) {
+            if let Some(next_state) = self.get_new_state(cur_state, letter_str) {
                 cur_state = next_state.clone();
             } else {
                 return None;
@@ -106,6 +106,70 @@ where
                 .collect(),
             final_states: self.final_states,
             start_states: HashSet::from([self.start_state]),
+        }
+    }
+
+    fn get_new_state<T: Into<ST>, S: Into<LT>>(&self, state: T, letter: S) -> Option<ST> {
+        self.delta.get(&(state.into(), letter.into())).cloned()
+    }
+
+    pub fn minimize(self) {
+        let mut marked_state_pairs = HashSet::<(ST, ST)>::new();
+        let mut unmarked_pairs = Vec::<(ST, ST)>::new();
+        let mut ordered_states: Vec<ST> = self.states.iter().cloned().collect();
+        ordered_states.sort();
+        for i in 0..ordered_states.len() - 1 {
+            for j in 1..ordered_states.len() {
+                if i == j {
+                    continue;
+                }
+                let i_state = &ordered_states[i];
+                let j_state = &ordered_states[j];
+
+                if (self.final_states.contains(i_state) && !self.final_states.contains(j_state))
+                    || (self.final_states.contains(j_state) && !self.final_states.contains(i_state))
+                {
+                    marked_state_pairs.insert((i_state.clone(), j_state.clone()));
+                } else {
+                    unmarked_pairs.push((i_state.clone(), j_state.clone()));
+                }
+            }
+        }
+
+        let mut changed = true;
+        while changed {
+            let old_pairs = unmarked_pairs;
+            unmarked_pairs = Vec::<(ST, ST)>::new();
+
+            for pair in old_pairs {
+                let mut was_marked = false;
+
+                for letter in self.alphabet.iter() {
+                    let next_i = self.get_new_state(pair.0.clone(), letter.clone());
+                    let next_j = self.get_new_state(pair.1.clone(), letter.clone());
+
+                    let is_marked = match (&next_i, &next_j) {
+                        (Some(i), Some(j)) => {
+                            (self.final_states.contains(i) && !self.final_states.contains(j))
+                                || (self.final_states.contains(j) && !self.final_states.contains(i))
+                        }
+                        (None, Some(j)) => self.final_states.contains(j),
+                        (Some(i), None) => self.final_states.contains(i),
+                        (None, None) => false,
+                    };
+
+                    if is_marked {
+                        was_marked = true;
+                        break;
+                    }
+                }
+                if was_marked {
+                    changed = true;
+                    marked_state_pairs.insert(pair);
+                } else {
+                    unmarked_pairs.push(pair);
+                }
+            }
         }
     }
 }

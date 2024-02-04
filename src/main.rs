@@ -42,7 +42,11 @@ fn main() {
     println!("{}", nea.accepts("0 1".split_ascii_whitespace()));
 
     println!("");
-    let dea = nea.to_dea(|x| x.iter().cloned().reduce(|y, a| (a + &y)).unwrap());
+    let dea = nea.to_dea(|x| {
+        let mut vec: Vec<String> = x.iter().cloned().collect();
+        vec.sort();
+        vec.join("")
+    });
 
     println!("{}", dea.accepts("0 1 0".split_ascii_whitespace()));
     println!("{}", dea.accepts("0 1 1".split_ascii_whitespace()));
@@ -50,4 +54,10 @@ fn main() {
     println!("{}", dea.accepts("0 1 1 1".split_ascii_whitespace()));
     println!("{}", dea.accepts("0 1 1 0".split_ascii_whitespace()));
     println!("{}", dea.accepts("0 1".split_ascii_whitespace()));
+
+    println!("Alphabet: {:?}", dea.alphabet);
+    println!("States: {:?}", dea.states);
+    println!("Delta: {:?}", dea.delta);
+    println!("Start State: {:?}", dea.start_state);
+    println!("Final States: {:?}", dea.final_states);
 }
