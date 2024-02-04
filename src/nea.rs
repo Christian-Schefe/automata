@@ -98,14 +98,14 @@ impl NEA {
 
         while let Some(cur) = current_states.pop_front() {
             let cur_str = state_set_to_state(cur.iter());
+            if cur.iter().any(|x| self.final_states.contains(x)) {
+                dea.add_final_state(cur_str.clone())
+            }
             for letter in self.alphabet.iter() {
                 let new_states = self.get_new_states(cur.iter(), letter);
                 let state_str = state_set_to_state(new_states.iter());
 
                 dea.add_transition(&cur_str, &state_str, letter);
-                if new_states.iter().any(|x| self.final_states.contains(x)) {
-                    dea.add_final_state(state_str.clone())
-                }
 
                 if visited_states.insert(state_str.clone()) {
                     current_states.push_back(new_states);
