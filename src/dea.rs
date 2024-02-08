@@ -1,5 +1,7 @@
 use std::{
-    collections::{HashMap, HashSet}, fmt::{Debug, Display}, hash::Hash
+    collections::{HashMap, HashSet},
+    fmt::{Debug, Display},
+    hash::Hash,
 };
 
 use crate::nea::NEA;
@@ -153,7 +155,8 @@ where
                     let is_marked = match (next_i, next_j) {
                         (Some(i), Some(j)) => {
                             (self.final_states.contains(&i) && !self.final_states.contains(&j))
-                                || (self.final_states.contains(&j) && !self.final_states.contains(&i))
+                                || (self.final_states.contains(&j)
+                                    && !self.final_states.contains(&i))
                                 || marked_pairs.contains(&(i, j))
                         }
                         (None, Some(j)) => self.final_states.contains(&j),
@@ -177,13 +180,55 @@ where
         println!("{:?}\n{:?}", marked_pairs, unmarked_pairs);
         self.clone()
     }
+
+    pub fn combine_states<T: Into<ST>>(
+        &mut self,
+        state1: T,
+        state2: T,
+        combiner: fn(ST, ST) -> ST,
+    ) {
+        let state1c = state1.into();
+        let state2c = state2.into();
+        let new_state = combiner(state1c.clone(), state2c.clone());
+        let mut transitions = Vec::new();
+
+        for ((s0, l), s1) in self.delta.iter() {
+            let s0c = s0.clone();
+            let s1c = s1.clone();
+            let lc = l.clone();
+            if (s0c == state1c || s0c == state2c) && (s1c == state1c || s1c == state2c) {
+                transitions.push((new_state.clone(), new_state.clone(), lc))
+            } else if s0c == state1c || s0c == state2c {
+                transitions.push((new_state.clone(), s1c, lc))
+            } else if s1c == state1c || s1c == state2c {
+                transitions.push((s0c, new_state.clone(), lc))
+            } else {
+                transitions.push((s0c, s1c, lc))
+            }
+        }
+        let final_states = self
+            .final_states
+            .iter()
+            .cloned()
+            .map(|x| if x != state1c && x != state2c {x} else {new_state.clone()});
+        let start_state = if self.start_state != state1c && self.start_state != state2c {
+            self.start_state.clone()
+        } else {
+            new_state.clone()
+        };
+        *self = DEA::from_transitions(start_state, final_states, transitions);
+    }
 }
 
-impl <ST,LT> Display for DEA<ST, LT> where
-ST: Debug + Display,
-LT: Debug + Display,
+impl<ST, LT> Display for DEA<ST, LT>
+where
+    ST: Debug + Display,
+    LT: Debug + Display,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_fmt(format_args!("Alphabet: {:?}\nStates: {:?}\nDelta: {:?}\nStart State: {}\nFinal States: {:?}", self.alphabet, self.states, self.delta, self.start_state, self.final_states))
+        f.write_fmt(format_args!(
+            "Alphabet: {:?}\nStates: {:?}\nDelta: {:?}\nStart State: {}\nFinal States: {:?}",
+            self.alphabet, self.states, self.delta, self.start_state, self.final_states
+        ))
     }
 }

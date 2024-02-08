@@ -15,7 +15,9 @@ fn main() {
 
 fn main_result() -> Result<(), String> {
     let arg = read_arg()?;
-    let dea = read_dea(arg)?;
+    let mut dea = read_dea(arg)?;
+    println!("{}", dea);
+    dea.combine_states("q1", "q2", |a, b| a + &b);
     println!("{}", dea);
     println!("Min: {}", dea.minimize());
     read_word(|x| {
