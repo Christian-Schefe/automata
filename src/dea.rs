@@ -1,6 +1,5 @@
 use std::{
-    collections::{HashMap, HashSet},
-    hash::Hash,
+    collections::{HashMap, HashSet}, fmt::{Debug, Display}, hash::Hash
 };
 
 use crate::nea::NEA;
@@ -171,5 +170,14 @@ where
                 }
             }
         }
+    }
+}
+
+impl <ST,LT> Display for DEA<ST, LT> where
+ST: Debug + Display,
+LT: Debug + Display,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!("Alphabet: {:?}\nStates: {:?}\nDelta: {:?}\nStart State: {}\nFinal States: {:?}", self.alphabet, self.states, self.delta, self.start_state, self.final_states))
     }
 }

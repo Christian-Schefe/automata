@@ -1,63 +1,47 @@
-use crate::dea::DEA;
-use crate::nea::NEA;
+use std::{env::args, io::stdin};
+
+use dea_parser::read_dea;
 
 mod dea;
+mod dea_parser;
 mod nea;
 
 fn main() {
-    let dea = DEA::<String, String>::from_transitions(
-        "q0",
-        ["q2"],
-        [("q0", "q1", "0"), ("q1", "q2", "1")],
-    );
+    match main_result() {
+        Ok(()) => (),
+        Err(err_str) => println!("Error: {}", err_str),
+    }
+}
 
-    println!("Alphabet: {:?}", dea.alphabet);
-    println!("States: {:?}", dea.states);
-    println!("Delta: {:?}", dea.delta);
-    println!("Start State: {:?}", dea.start_state);
-    println!("Final States: {:?}", dea.final_states);
+fn main_result() -> Result<(), String> {
+    let arg = read_arg()?;
+    let dea = read_dea(arg)?;
+    println!("{}", dea);
+    read_word(|x| println!("{}", dea.accepts(x.split_ascii_whitespace())))?;
+    Ok(())
+}
 
-    println!("{}", dea.accepts("0 1 0".split_ascii_whitespace()));
-    println!("{}", dea.accepts("0 1".split_ascii_whitespace()));
+fn read_word<U, T: Fn(String) -> U>(callback: T) -> Result<(), String> {
+    let stdin = stdin();
+    loop {
+        let mut buf = String::new();
+        stdin.read_line(&mut buf).map_err(|x| x.to_string())?;
+        buf = buf.trim().to_string();
+        if  buf == "exit" {
+            break;
+        }
+        callback(buf);
+    }
+    Ok(())
+}
 
-    let nea = NEA::<String, String>::from_transitions(
-        ["q0"],
-        ["q3"],
-        vec![
-            ("q0", "q0", "0"),
-            ("q0", "q0", "1"),
-            ("q0", "q1", "1"),
-            ("q1", "q2", "0"),
-            ("q1", "q2", "1"),
-            ("q2", "q3", "0"),
-            ("q2", "q3", "1"),
-        ],
-    );
-
-    println!("{}", nea.accepts("0 1 0".split_ascii_whitespace()));
-    println!("{}", nea.accepts("0 1 1".split_ascii_whitespace()));
-    println!("{}", nea.accepts("0 1 0 1".split_ascii_whitespace()));
-    println!("{}", nea.accepts("0 1 1 1".split_ascii_whitespace()));
-    println!("{}", nea.accepts("0 1 1 0".split_ascii_whitespace()));
-    println!("{}", nea.accepts("0 1".split_ascii_whitespace()));
-
-    println!("");
-    let dea = nea.to_dea(|x| {
-        let mut vec: Vec<String> = x.iter().cloned().collect();
-        vec.sort();
-        vec.join("")
-    });
-
-    println!("{}", dea.accepts("0 1 0".split_ascii_whitespace()));
-    println!("{}", dea.accepts("0 1 1".split_ascii_whitespace()));
-    println!("{}", dea.accepts("0 1 0 1".split_ascii_whitespace()));
-    println!("{}", dea.accepts("0 1 1 1".split_ascii_whitespace()));
-    println!("{}", dea.accepts("0 1 1 0".split_ascii_whitespace()));
-    println!("{}", dea.accepts("0 1".split_ascii_whitespace()));
-
-    println!("Alphabet: {:?}", dea.alphabet);
-    println!("States: {:?}", dea.states);
-    println!("Delta: {:?}", dea.delta);
-    println!("Start State: {:?}", dea.start_state);
-    println!("Final States: {:?}", dea.final_states);
+fn read_arg() -> Result<String, String> {
+    let args: Vec<String> = args().collect();
+    if args.len() > 2 {
+        Err("too many arguments".to_string())
+    } else {
+        args.into_iter()
+            .nth(1)
+            .ok_or("Not enough aruments".to_string())
+    }
 }
