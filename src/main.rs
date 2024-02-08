@@ -17,7 +17,10 @@ fn main_result() -> Result<(), String> {
     let arg = read_arg()?;
     let dea = read_dea(arg)?;
     println!("{}", dea);
-    read_word(|x| println!("{}", dea.accepts(x.split_ascii_whitespace())))?;
+    println!("Min: {}", dea.minimize());
+    read_word(|x| {
+        println!("{}", dea.accepts(x.split_ascii_whitespace()));
+    })?;
     Ok(())
 }
 
@@ -27,7 +30,7 @@ fn read_word<U, T: Fn(String) -> U>(callback: T) -> Result<(), String> {
         let mut buf = String::new();
         stdin.read_line(&mut buf).map_err(|x| x.to_string())?;
         buf = buf.trim().to_string();
-        if  buf == "exit" {
+        if buf == "exit" {
             break;
         }
         callback(buf);

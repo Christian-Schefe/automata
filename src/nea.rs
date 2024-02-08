@@ -1,6 +1,5 @@
 use std::{
-    collections::{HashMap, HashSet, VecDeque},
-    hash::Hash,
+    collections::{HashMap, HashSet, VecDeque}, fmt::Debug, hash::Hash
 };
 
 use crate::dea::DEA;
@@ -15,8 +14,8 @@ pub struct NEA<ST, LT> {
 
 impl<ST, LT> NEA<ST, LT>
 where
-    ST: Eq + Hash + Clone + Ord,
-    LT: Eq + Hash + Clone,
+    ST: Eq + Hash + Clone + Ord + Debug,
+    LT: Eq + Hash + Clone + Debug,
 {
     pub fn new<T: Into<ST>>(start_states: impl IntoIterator<Item = T>) -> Self {
         let start_states_str = start_states.into_iter().map(T::into).collect();

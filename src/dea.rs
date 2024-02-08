@@ -4,6 +4,7 @@ use std::{
 
 use crate::nea::NEA;
 
+#[derive(Clone)]
 pub struct DEA<ST, LT> {
     pub alphabet: HashSet<LT>,
     pub states: HashSet<ST>,
@@ -14,8 +15,8 @@ pub struct DEA<ST, LT> {
 
 impl<ST, LT> DEA<ST, LT>
 where
-    ST: Eq + Hash + Clone + Ord,
-    LT: Eq + Hash + Clone,
+    ST: Eq + Hash + Clone + Ord + Debug,
+    LT: Eq + Hash + Clone + Debug,
 {
     pub fn new<T: Into<ST>>(start_state: T) -> Self {
         DEA {
@@ -112,11 +113,12 @@ where
         self.delta.get(&(state.into(), letter.into())).cloned()
     }
 
-    pub fn minimize(self) {
-        let mut marked_state_pairs = HashSet::<(ST, ST)>::new();
+    pub fn minimize(&self) -> Self {
+        let mut marked_pairs = HashSet::<(ST, ST)>::new();
         let mut unmarked_pairs = Vec::<(ST, ST)>::new();
         let mut ordered_states: Vec<ST> = self.states.iter().cloned().collect();
         ordered_states.sort();
+
         for i in 0..ordered_states.len() - 1 {
             for j in 1..ordered_states.len() {
                 if i == j {
@@ -128,7 +130,7 @@ where
                 if (self.final_states.contains(i_state) && !self.final_states.contains(j_state))
                     || (self.final_states.contains(j_state) && !self.final_states.contains(i_state))
                 {
-                    marked_state_pairs.insert((i_state.clone(), j_state.clone()));
+                    marked_pairs.insert((i_state.clone(), j_state.clone()));
                 } else {
                     unmarked_pairs.push((i_state.clone(), j_state.clone()));
                 }
@@ -137,6 +139,7 @@ where
 
         let mut changed = true;
         while changed {
+            changed = false;
             let old_pairs = unmarked_pairs;
             unmarked_pairs = Vec::<(ST, ST)>::new();
 
@@ -147,13 +150,14 @@ where
                     let next_i = self.get_new_state(pair.0.clone(), letter.clone());
                     let next_j = self.get_new_state(pair.1.clone(), letter.clone());
 
-                    let is_marked = match (&next_i, &next_j) {
+                    let is_marked = match (next_i, next_j) {
                         (Some(i), Some(j)) => {
-                            (self.final_states.contains(i) && !self.final_states.contains(j))
-                                || (self.final_states.contains(j) && !self.final_states.contains(i))
+                            (self.final_states.contains(&i) && !self.final_states.contains(&j))
+                                || (self.final_states.contains(&j) && !self.final_states.contains(&i))
+                                || marked_pairs.contains(&(i, j))
                         }
-                        (None, Some(j)) => self.final_states.contains(j),
-                        (Some(i), None) => self.final_states.contains(i),
+                        (None, Some(j)) => self.final_states.contains(&j),
+                        (Some(i), None) => self.final_states.contains(&i),
                         (None, None) => false,
                     };
 
@@ -164,12 +168,14 @@ where
                 }
                 if was_marked {
                     changed = true;
-                    marked_state_pairs.insert(pair);
+                    marked_pairs.insert(pair);
                 } else {
                     unmarked_pairs.push(pair);
                 }
             }
         }
+        println!("{:?}\n{:?}", marked_pairs, unmarked_pairs);
+        self.clone()
     }
 }
 
