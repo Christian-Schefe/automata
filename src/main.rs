@@ -1,4 +1,4 @@
-use std::{env::args, io::stdin};
+use std::{collections::HashSet, env::args, io::stdin};
 
 use dea_parser::read_dea;
 
@@ -14,16 +14,18 @@ fn main() {
 }
 
 fn main_result() -> Result<(), String> {
-    let arg = read_arg()?;
-    let mut dea = read_dea(arg)?;
-    println!("{}", dea);
-    dea.combine_states(["q1", "q2"].into_iter(), |states| {
+    let combiner = |states: HashSet<String>| {
         let mut v: Vec<String> = states.into_iter().collect();
         v.sort();
         v.join("")
-    });
+    };
+
+    let arg = read_arg()?;
+    let mut dea = read_dea(arg)?;
     println!("{}", dea);
-    dea.minimize();
+    dea.combine_states(["q1", "q2"].into_iter(), combiner);
+    println!("{}", dea);
+    dea.minimize(combiner);
     println!("Min: {}", dea);
     read_word(|x| {
         println!("{}", dea.accepts(x.split_ascii_whitespace()));

@@ -115,7 +115,7 @@ where
         self.delta.get(&(state.into(), letter.into())).cloned()
     }
 
-    pub fn minimize(&mut self) {
+    pub fn minimize(&mut self, combiner: fn(HashSet<ST>) -> ST) {
         let mut marked_pairs: HashSet<(ST, ST)> = HashSet::new();
         let mut unmarked_pairs = Vec::<(ST, ST)>::new();
         let mut ordered_states: Vec<ST> = self.states.iter().cloned().collect();
@@ -197,14 +197,18 @@ where
                 groups[i].insert(s1);
             }
         }
+
+        for group in groups {
+            self.combine_states(group, combiner);
+        }
     }
 
     pub fn combine_states<T: Into<ST>>(
         &mut self,
-        states: impl Iterator<Item = T>,
+        states: impl IntoIterator<Item = T>,
         combiner: fn(HashSet<ST>) -> ST,
     ) {
-        let mapped_states: HashSet<ST> = states.map(T::into).collect();
+        let mapped_states: HashSet<ST> = states.into_iter().map(T::into).collect();
         let new_state = combiner(mapped_states.clone());
 
         let state_map: HashMap<ST, &ST> = self
