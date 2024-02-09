@@ -23,7 +23,8 @@ fn main_result() -> Result<(), String> {
         v.join("")
     });
     println!("{}", dea);
-    println!("Min: {}", dea.minimize());
+    dea.minimize();
+    println!("Min: {}", dea);
     read_word(|x| {
         println!("{}", dea.accepts(x.split_ascii_whitespace()));
     })?;

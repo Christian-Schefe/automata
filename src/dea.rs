@@ -115,8 +115,8 @@ where
         self.delta.get(&(state.into(), letter.into())).cloned()
     }
 
-    pub fn minimize(&self) -> Self {
-        let mut marked_pairs = HashSet::<(ST, ST)>::new();
+    pub fn minimize(&mut self) {
+        let mut marked_pairs: HashSet<(ST, ST)> = HashSet::new();
         let mut unmarked_pairs = Vec::<(ST, ST)>::new();
         let mut ordered_states: Vec<ST> = self.states.iter().cloned().collect();
         ordered_states.sort();
@@ -178,7 +178,25 @@ where
             }
         }
         println!("{:?}\n{:?}", marked_pairs, unmarked_pairs);
-        self.clone()
+
+        let mut groups: Vec<HashSet<ST>> = Vec::new();
+        let mut group_map: HashMap<ST, usize> = HashMap::new();
+        for (s0, s1) in unmarked_pairs {
+            if !group_map.contains_key(&s0) && !group_map.contains_key(&s1) {
+                let i = groups.len();
+                group_map.insert(s0.clone(), i);
+                group_map.insert(s1.clone(), i);
+                groups.push(HashSet::from([s0, s1]));
+            } else if !group_map.contains_key(&s0) {
+                let i = group_map[&s1];
+                group_map.insert(s0.clone(), i);
+                groups[i].insert(s0);
+            } else if !group_map.contains_key(&s1) {
+                let i = group_map[&s0];
+                group_map.insert(s1.clone(), i);
+                groups[i].insert(s1);
+            }
+        }
     }
 
     pub fn combine_states<T: Into<ST>>(
@@ -189,7 +207,20 @@ where
         let mapped_states: HashSet<ST> = states.map(T::into).collect();
         let new_state = combiner(mapped_states.clone());
 
-        let state_map: HashMap<ST, &ST> = self.states.iter().map(|x| (x.clone(), if mapped_states.contains(x) {&new_state} else {x})).collect();
+        let state_map: HashMap<ST, &ST> = self
+            .states
+            .iter()
+            .map(|x| {
+                (
+                    x.clone(),
+                    if mapped_states.contains(x) {
+                        &new_state
+                    } else {
+                        x
+                    },
+                )
+            })
+            .collect();
 
         let mut transitions = Vec::new();
 
@@ -201,7 +232,12 @@ where
         }
 
         let start_state = state_map[&self.start_state].clone();
-        let final_states: HashSet<ST> = self.final_states.iter().map(|x| state_map[x]).cloned().collect();
+        let final_states: HashSet<ST> = self
+            .final_states
+            .iter()
+            .map(|x| state_map[x])
+            .cloned()
+            .collect();
 
         *self = DEA::from_transitions(start_state, final_states, transitions);
     }
