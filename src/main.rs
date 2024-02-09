@@ -17,7 +17,11 @@ fn main_result() -> Result<(), String> {
     let arg = read_arg()?;
     let mut dea = read_dea(arg)?;
     println!("{}", dea);
-    dea.combine_states("q1", "q2", |a, b| a + &b);
+    dea.combine_states(["q1", "q2"].into_iter(), |states| {
+        let mut v: Vec<String> = states.into_iter().collect();
+        v.sort();
+        v.join("")
+    });
     println!("{}", dea);
     println!("Min: {}", dea.minimize());
     read_word(|x| {

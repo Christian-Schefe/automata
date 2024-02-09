@@ -183,39 +183,26 @@ where
 
     pub fn combine_states<T: Into<ST>>(
         &mut self,
-        state1: T,
-        state2: T,
-        combiner: fn(ST, ST) -> ST,
+        states: impl Iterator<Item = T>,
+        combiner: fn(HashSet<ST>) -> ST,
     ) {
-        let state1c = state1.into();
-        let state2c = state2.into();
-        let new_state = combiner(state1c.clone(), state2c.clone());
+        let mapped_states: HashSet<ST> = states.map(T::into).collect();
+        let new_state = combiner(mapped_states.clone());
+
+        let state_map: HashMap<ST, &ST> = self.states.iter().map(|x| (x.clone(), if mapped_states.contains(x) {&new_state} else {x})).collect();
+
         let mut transitions = Vec::new();
 
-        for ((s0, l), s1) in self.delta.iter() {
-            let s0c = s0.clone();
-            let s1c = s1.clone();
-            let lc = l.clone();
-            if (s0c == state1c || s0c == state2c) && (s1c == state1c || s1c == state2c) {
-                transitions.push((new_state.clone(), new_state.clone(), lc))
-            } else if s0c == state1c || s0c == state2c {
-                transitions.push((new_state.clone(), s1c, lc))
-            } else if s1c == state1c || s1c == state2c {
-                transitions.push((s0c, new_state.clone(), lc))
-            } else {
-                transitions.push((s0c, s1c, lc))
-            }
+        for ((from_state, letter), to_state) in self.delta.iter() {
+            let new_from_state = state_map[from_state];
+            let new_to_state = state_map[to_state];
+
+            transitions.push((new_from_state.clone(), new_to_state.clone(), letter.clone()))
         }
-        let final_states = self
-            .final_states
-            .iter()
-            .cloned()
-            .map(|x| if x != state1c && x != state2c {x} else {new_state.clone()});
-        let start_state = if self.start_state != state1c && self.start_state != state2c {
-            self.start_state.clone()
-        } else {
-            new_state.clone()
-        };
+
+        let start_state = state_map[&self.start_state].clone();
+        let final_states: HashSet<ST> = self.final_states.iter().map(|x| state_map[x]).cloned().collect();
+
         *self = DEA::from_transitions(start_state, final_states, transitions);
     }
 }
