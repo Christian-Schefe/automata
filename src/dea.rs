@@ -1,5 +1,5 @@
 use std::{
-    collections::{HashMap, HashSet},
+    collections::{HashMap, HashSet, VecDeque},
     fmt::{Debug, Display},
     hash::Hash,
 };
@@ -179,23 +179,46 @@ where
         }
         println!("{:?}\n{:?}", marked_pairs, unmarked_pairs);
 
+        self.combine_state_pairs(unmarked_pairs, combiner);
+    }
+
+    pub fn combine_state_pairs(
+        &mut self,
+        pairs: impl IntoIterator<Item = (ST, ST)>,
+        combiner: fn(HashSet<ST>) -> ST,
+    ) {
+        let mut neighbours: HashMap<ST, Vec<ST>> = self
+            .states
+            .iter()
+            .map(|x| (x.clone(), Vec::new()))
+            .collect();
+        for (s0, s1) in pairs {
+            neighbours.get_mut(&s0).unwrap().push(s1.clone());
+            neighbours.get_mut(&s1).unwrap().push(s0);
+        }
+
+        let mut visited: HashSet<ST> = HashSet::new();
         let mut groups: Vec<HashSet<ST>> = Vec::new();
-        let mut group_map: HashMap<ST, usize> = HashMap::new();
-        for (s0, s1) in unmarked_pairs {
-            if !group_map.contains_key(&s0) && !group_map.contains_key(&s1) {
-                let i = groups.len();
-                group_map.insert(s0.clone(), i);
-                group_map.insert(s1.clone(), i);
-                groups.push(HashSet::from([s0, s1]));
-            } else if !group_map.contains_key(&s0) {
-                let i = group_map[&s1];
-                group_map.insert(s0.clone(), i);
-                groups[i].insert(s0);
-            } else if !group_map.contains_key(&s1) {
-                let i = group_map[&s0];
-                group_map.insert(s1.clone(), i);
-                groups[i].insert(s1);
+        for state in self.states.iter() {
+            if visited.contains(state) {
+                continue;
             }
+
+            let mut group: HashSet<ST> = HashSet::new();
+            let mut queue: VecDeque<ST> = VecDeque::new();
+            queue.push_back(state.clone());
+
+            while let Some(cur_state) = queue.pop_front() {
+                group.insert(cur_state.clone());
+                for n in neighbours[&cur_state].iter() {
+                    if !group.contains(n) {
+                        queue.push_back(n.clone());
+                    }
+                }
+            }
+
+            visited.extend(group.iter().cloned());
+            groups.push(group);
         }
 
         for group in groups {
