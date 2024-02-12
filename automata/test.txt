@@ -1,4 +1,14 @@
 q0
-q2
-q0 q1: 0
-q1 q2: 1
+q2 q3 q4
+q0 q1: a
+q0 q5: b
+q1 q1: b
+q1 q2: a
+q2 q2: a
+q2 q3: b
+q3 q3: a
+q3 q3: b
+q4 q3: a
+q4 q3: b
+q5 q4: a
+q5 q5: b

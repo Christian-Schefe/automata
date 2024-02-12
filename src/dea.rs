@@ -4,8 +4,6 @@ use std::{
     hash::Hash,
 };
 
-use crate::nea::NEA;
-
 #[derive(Clone)]
 pub struct DEA<ST, LT> {
     pub alphabet: HashSet<LT>,
@@ -94,30 +92,32 @@ where
         state.is_some_and(|x| self.final_states.contains(&x))
     }
 
-    pub fn to_nea<FN>(self) -> NEA<ST, LT>
-    where
-        FN: Fn(&HashSet<ST>) -> ST,
-    {
-        NEA {
-            alphabet: self.alphabet,
-            states: self.states,
-            delta: self
-                .delta
-                .into_iter()
-                .map(|(x, y)| (x, HashSet::from([y])))
-                .collect(),
-            final_states: self.final_states,
-            start_states: HashSet::from([self.start_state]),
+    fn get_new_state(&self, state: ST, letter: LT) -> Option<ST> {
+        self.delta.get(&(state, letter)).cloned()
+    }
+
+    pub fn completed(&self, trap_state: impl Into<ST>) -> Self {
+        let mut transitions = Vec::new();
+        let trap = trap_state.into();
+        for state in self.states.iter() {
+            for letter in self.alphabet.iter() {
+                match self.get_new_state(state.clone(), letter.clone()) {
+                    Some(new_state) => transitions.push((state.clone(), new_state, letter.clone())),
+                    None => transitions.push((state.clone(), trap.clone(), letter.clone())),
+                }
+            }
         }
+
+        DEA::from_transitions(
+            self.start_state.clone(),
+            self.final_states.clone(),
+            transitions,
+        )
     }
 
-    fn get_new_state<T: Into<ST>, S: Into<LT>>(&self, state: T, letter: S) -> Option<ST> {
-        self.delta.get(&(state.into(), letter.into())).cloned()
-    }
-
-    pub fn minimize(&mut self, combiner: fn(HashSet<ST>) -> ST) {
+    pub fn minimized(&self, combiner: fn(HashSet<ST>) -> ST) -> Self {
         let mut marked_pairs: HashSet<(ST, ST)> = HashSet::new();
-        let mut unmarked_pairs = Vec::<(ST, ST)>::new();
+        let mut unmarked_pairs: Vec<(ST, ST)> = Vec::new();
         let mut ordered_states: Vec<ST> = self.states.iter().cloned().collect();
         ordered_states.sort();
 
@@ -177,12 +177,13 @@ where
                 }
             }
         }
-        println!("{:?}\n{:?}", marked_pairs, unmarked_pairs);
 
-        self.combine_state_pairs(unmarked_pairs, combiner);
+        let mut min_dea = self.clone();
+        min_dea.combine_state_pairs(unmarked_pairs, combiner);
+        min_dea
     }
 
-    pub fn combine_state_pairs(
+    fn combine_state_pairs(
         &mut self,
         pairs: impl IntoIterator<Item = (ST, ST)>,
         combiner: fn(HashSet<ST>) -> ST,
@@ -226,7 +227,7 @@ where
         }
     }
 
-    pub fn combine_states<T: Into<ST>>(
+    fn combine_states<T: Into<ST>>(
         &mut self,
         states: impl IntoIterator<Item = T>,
         combiner: fn(HashSet<ST>) -> ST,
